@@ -1,0 +1,62 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        
+    - name: Create virtual environment
+      run: uv venv
+    
+    - name: Install dependencies
+      run: uv pip install pytest pytest-cov
+      
+    - name: Run tests
+      run: uv run pytest tests/ --cov=src --cov-report=xml
+
+    - name: Send Telegram success message
+      if: success()
+      uses: appleboy/telegram-action@v0.1.1
+      with:
+        to: ${{ secrets.TELEGRAM_CHAT_ID }}
+        token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        message: |
+          ✅ Тесты успешно пройдены для ${{ github.repository }}
+          Commit: ${{ github.sha }}
+          Workflow run: ${{ github.event.pull_request.html_url || github.ref }}
+
+    - name: Send Telegram failure message
+      if: failure()
+      uses: appleboy/telegram-action@v0.1.1
+      with:
+        to: ${{ secrets.TELEGRAM_CHAT_ID }}
+        token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        message: |
+          ❌ Тесты провалены для ${{ github.repository }}
+          Commit: ${{ github.sha }}
+          Workflow run: ${{ github.event.pull_request.html_url || github.ref }}
+          Проверьте логи GitHub Actions для деталей: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }} 
