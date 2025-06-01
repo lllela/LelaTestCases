@@ -190,3 +190,17 @@ def test_apply_new_media_paths_with_directory_error(tmp_path):
     assert (folder / "subfolder").exists()
     assert not (folder / "song1 [Artist A].mp3").exists()
     assert (tmp_path / "Artist A" / "song1 [Artist A].mp3").exists()
+    
+def test_update_index(tmp_path):
+    folder = tmp_path / "Test Folder"
+    folder.mkdir()
+    (folder / "song [Artist A].mp3").touch()
+    
+    from src.scripts.update_index import main
+    main(tmp_path)
+    assert not (tmp_path / "Artist A" / "song [Artist A].mp3").exists()
+    assert not (tmp_path / "Test Folder (1)").exists()
+
+def test_update_index_main_runs(tmp_path):
+    from src.scripts.update_index import main
+    main(tmp_path)
